@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Omnia-Pi-master.iml" filepath="$PROJECT_DIR$/Omnia-Pi-master.iml" />
+      <module fileurl="file://$PROJECT_DIR$/OmniaUART.iml" filepath="$PROJECT_DIR$/OmniaUART.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
