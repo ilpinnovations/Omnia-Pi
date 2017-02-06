@@ -1,4 +1,4 @@
-package com.tcs.innovations.omniauart;
+package com.tcs.innovations.omnia;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

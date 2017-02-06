@@ -1,3 +1,11 @@
 <resources>
-    <string name="app_name">Omnia UART</string>
+    <string name="app_name">Omnia-Arc</string>
+    <string name="shared_prefs">Network</string>
+    <string name="ip_address">ip</string>
+
+    <string-array name="toggle_array">
+        <item>EX</item>
+        <item>QR</item>
+        <item>KB</item>
+    </string-array>
 </resources>
