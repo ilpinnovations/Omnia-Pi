@@ -28,13 +28,18 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.util.Strings;
 import org.honorato.multistatetogglebutton.MultiStateToggleButton;
 import org.honorato.multistatetogglebutton.ToggleButton;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+
+import io.github.rockerhieu.emojicon.EmojiconTextView;
+import io.github.rockerhieu.emojicon.emoji.Emojicon;
 
 public class MainActivity extends AppCompatActivity implements MqttCallback {
 
@@ -63,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     private ImageView imageView;
 
     private ImageView qrCodeView;
-    private TextView expressionView;
+    private EmojiconTextView expressionView;
     private LinearLayout keyboardView;
     private TextView chatReceived;
 
@@ -244,11 +249,12 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         buttonSubmit.setOnClickListener(btnClickListener);
 
         qrCodeView = (ImageView) findViewById(R.id.qr_code_view);
-        expressionView = (TextView) findViewById(R.id.expression_view);
+        expressionView = (EmojiconTextView) findViewById(R.id.expression_view);
         keyboardView = (LinearLayout) findViewById(R.id.keyboard_view);
 
         multiStateToggleButton = (MultiStateToggleButton) this.findViewById(R.id.multi_stage_toggle);
         multiStateToggleButton.setOnValueChangedListener(valueChangedListener);
+        multiStateToggleButton.setValue(0);
 
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.shared_prefs), Context.MODE_PRIVATE);
         String ip = sharedPref.getString(getApplicationContext().getString(R.string.ip_address), "");
@@ -263,15 +269,19 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     private void connectPaho(){
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.shared_prefs), Context.MODE_PRIVATE);
         String ip = sharedPref.getString(getApplicationContext().getString(R.string.ip_address), "");
-        broker = "tcp://" + ip + ":1883";
+        broker = "tcp://m12.cloudmqtt.com:13768";
         Log.i(TAG, broker);
 
         client =
                 new MqttAndroidClient(getApplicationContext(), broker,
                         clientId);
 
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setUserName("bdlwjtiv");
+        options.setPassword("LXdcdOEP_4CU".toCharArray());
+
         try {
-            IMqttToken token = client.connect();
+            IMqttToken token = client.connect(options);
             token.setActionCallback(new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
@@ -413,7 +423,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                         break;
 
                     default:
-                        chatReceived.setText(message.toString());
+                        chatReceived.setText(message.getPayload().toString());
                         break;
                 }
 
@@ -422,19 +432,10 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
             case topic_expression:
                 if (expressionIsVisible && !message.toString().equalsIgnoreCase("")){
                     // expression view visible
-                    Log.i(TAG, "expression visible");
-                    String smiling = message.toString().split("|")[0];
-                    String leftEyeOpen = message.toString().split("|")[1];
-                    String rightEyeOpen = message.toString().split("|")[2];
-                    Emoji emoji = new Emoji();
-                    emoji.setExpression(Float.valueOf(leftEyeOpen), Float.valueOf(rightEyeOpen), Float.valueOf(smiling));
 
-                    Log.i(TAG, "Smiling: " + smiling);
-                    Log.i(TAG, "Left: " + leftEyeOpen);
-                    Log.i(TAG, "Right: " + rightEyeOpen);
+                    Log.i(TAG, "expression visible: " + String.valueOf(message.getPayload()));
 
-                    expressionView.setText(emoji.getEmojiChar());
-                    Log.i(TAG, "Emoji char: " + emoji.getEmojiChar());
+                    expressionView.setText(message.getPayload().toString());
                 }else {
                     Log.i(TAG, "expression invisible");
                     // expression not visible
