@@ -6,6 +6,6 @@
     <string-array name="toggle_array">
         <item>EX</item>
         <item>QR</item>
-        <item>KB</item>
+        <item>COLOR</item>>
     </string-array>
 </resources>

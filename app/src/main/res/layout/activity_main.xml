@@ -189,9 +189,10 @@
 
             <ImageView
                 android:id="@+id/qr_code_view"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone"/>
+                android:layout_width="400dp"
+                android:layout_height="400dp"
+                android:visibility="gone"
+                android:layout_gravity="center"/>
 
             <io.github.rockerhieu.emojicon.EmojiconTextView
                 android:id="@+id/expression_view"
@@ -202,6 +203,42 @@
                 android:layout_gravity="center"
                 android:textSize="200sp"/>
 
+            <LinearLayout
+                android:id="@+id/color_picker_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <com.flask.colorpicker.ColorPickerView
+                    android:id="@+id/color_picker_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:alphaSlider="false"
+                    app:density="12"
+                    app:lightnessSlider="false"
+                    app:wheelType="FLOWER"
+                    />
+
+                <ImageView
+                    android:id="@+id/color_picker_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="70dp"
+                    android:layout_margin="10dp"
+                    android:background="@color/button_primary_color"
+                    android:visibility="visible"/>
+
+                <android.support.v7.widget.AppCompatButton
+                    android:id="@+id/color_send_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Send Color"
+                    android:background="@color/colorAccent"
+                    android:textColor="@android:color/white"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
         </FrameLayout>
 
         <TextView
@@ -210,7 +247,8 @@
             android:layout_height="wrap_content"
             android:padding="10dp"
             android:gravity="center"
-            android:text="Welcome!"/>
+            android:text="Welcome!"
+            android:textSize="50sp"/>
 
 
     </LinearLayout>

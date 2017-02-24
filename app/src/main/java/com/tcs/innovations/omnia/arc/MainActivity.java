@@ -3,6 +3,7 @@ package com.tcs.innovations.omnia.arc;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.AppCompatButton;
@@ -14,7 +15,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.flask.colorpicker.ColorPickerView;
+import com.flask.colorpicker.OnColorChangedListener;
+import com.flask.colorpicker.OnColorSelectedListener;
+import com.google.android.things.pio.Gpio;
 import com.google.android.things.pio.PeripheralManagerService;
+import com.google.android.things.pio.Pwm;
 import com.google.android.things.pio.UartDevice;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
@@ -37,6 +43,8 @@ import org.honorato.multistatetogglebutton.ToggleButton;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
+import java.util.List;
 
 import io.github.rockerhieu.emojicon.EmojiconTextView;
 import io.github.rockerhieu.emojicon.emoji.Emojicon;
@@ -44,32 +52,49 @@ import io.github.rockerhieu.emojicon.emoji.Emojicon;
 public class MainActivity extends AppCompatActivity implements MqttCallback {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-
+    int command = 4;
     private String clientId = "omnia_arc";
+    private static final String topic_control = "control";
+    private static final String topic_text = "text";
+    private static final String topic_expression = "expression";
+    private static final String topic_color = "color";
+    private static final String BCM23 = "BCM23";
+    private static final String BCM25 = "BCM25";
+    private static final String BCM19 = "BCM19";
+    private static final String BCM26 = "BCM26";
+    private static final String PWM0 = "PWM0";
+    private static final String PWM1 = "PWM1";
+    private Gpio mGpio23;
+    private Gpio mGpio25;
+    private Gpio mGpio19;
+    private Gpio mGpio26;
+    private Pwm PWM_0;
+    private Pwm PWM_1;
 
-    private static final String topic_control = "omnia/control";
-    private static final String topic_text = "omnia/text";
-    private static final String topic_expression = "omnia/expression";
+    private Gpio THREAD_GPIO_1;
+    private Gpio THREAD_GPIO_2;
+    private Pwm THREAD_PWM;
+    private boolean THREAD_BOOL_1;
+    private boolean THREAD_BOOL_2;
+    private Gpio THREAD_GPIO_3;
+    private Gpio THREAD_GPIO_4;
+    private Pwm THREAD_PWM1;
+    private boolean THREAD_BOOL_3;
+    private boolean THREAD_BOOL_4;
 
     private int qos = 2;
     private String broker = "";
-//    private String broker = "tcp://163.122.226.62:1883";
-    private String url = "";
-    //    private String url = "https://google.com";
-    MqttAndroidClient client;
+    MqttAndroidClient client, client2;
 
     private static boolean expressionIsVisible = true;
-
-    private PeripheralManagerService manager = new PeripheralManagerService();
     private UartDevice uartDevice;
-
     private EditText editText;
-    private AppCompatButton b1, b2, b3, b4, b5, b6, b7, b8, b9, b0, bDot, buttonSubmit, btnBack;
-    private ImageView imageView;
-
+    private AppCompatButton b1, b2, b3, b4, b5, b6, b7, b8, b9, b0, bDot, buttonSubmit, btnBack, sendColor;
+    private ImageView imageView, colorPickerImage;
+    private ColorPickerView colorPickerView;
     private ImageView qrCodeView;
     private EmojiconTextView expressionView;
-    private LinearLayout keyboardView;
+    private LinearLayout keyboardView, colorPickerContainer;
     private TextView chatReceived;
 
     private MultiStateToggleButton multiStateToggleButton;
@@ -78,6 +103,48 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     public static int black = 0xFF000000;
     public final static int WIDTH=500;
 
+
+
+    private int colorLatest = 0;
+
+    private View.OnClickListener sendColorListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+
+        }
+    };
+
+    private OnColorChangedListener colorChangedListener = new OnColorChangedListener() {
+        @Override
+        public void onColorChanged(int i) {
+            Log.d("ColorPicker", "onColorChanged: 0x" + Integer.toHexString(i));
+            Log.d("ColorPicker", "onColorChanged: " + i);
+            String color = "#" + Integer.toHexString(i).toUpperCase().substring(2,8);
+            colorPickerImage.setBackgroundColor(Color.parseColor(color));
+
+            Log.i(TAG, "message published: " + color);
+            publishMessage(color);
+        }
+    };
+
+    private OnColorSelectedListener colorSelectedListener = new OnColorSelectedListener() {
+        @Override
+        public void onColorSelected(int i) {
+            Log.d("ColorPicker", "onColorSelected: 0x" + Integer.toHexString(i).toUpperCase().substring(2,8));
+            colorLatest = i;
+
+            String color = "#" + Integer.toHexString(i).toUpperCase().substring(2,8);
+            colorPickerImage.setBackgroundColor(Color.parseColor(color));
+
+            Toast.makeText(
+                    getApplicationContext(),
+                    "selectedColor: " + color,
+                    Toast.LENGTH_SHORT).show();
+
+            Log.i(TAG, "message published: " + color);
+            publishMessage(color);
+        }
+    };
 
     private View.OnClickListener btnClickListener = new View.OnClickListener() {
         @Override
@@ -140,21 +207,14 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                     editor.commit();
                     editor.apply();
 
-                    connectPaho();
-
-//                     Attempt to access the UART device
-                    try {
-                        PeripheralManagerService manager = new PeripheralManagerService();
-                        uartDevice = manager.openUartDevice("UART0");
-                    } catch (IOException e) {
-                        Log.w(TAG, "Unable to access UART device", e);
+                    if (!client.isConnected()){
+                        connectPaho();
                     }
 
-                    try {
-                        configureUartFrame(uartDevice);
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (!client2.isConnected()){
+                        connectPahoColor();
                     }
+
                     break;
             }
         }
@@ -167,23 +227,28 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
             switch (value){
                 case 0:
+                    Log.i(TAG, "at position 0");
                     expressionView.setVisibility(View.VISIBLE);
-                    keyboardView.setVisibility(View.INVISIBLE);
+                    keyboardView.setVisibility(View.GONE);
                     qrCodeView.setVisibility(View.INVISIBLE);
+                    colorPickerContainer.setVisibility(View.GONE);
+                    chatReceived.setVisibility(View.VISIBLE);
+
                     expressionIsVisible = true;
                     break;
 
                 case 1:
+                    Log.i(TAG, "at position 1");
                     expressionView.setVisibility(View.INVISIBLE);
-                    keyboardView.setVisibility(View.INVISIBLE);
+                    keyboardView.setVisibility(View.GONE);
                     qrCodeView.setVisibility(View.VISIBLE);
+                    colorPickerContainer.setVisibility(View.GONE);
+                    chatReceived.setVisibility(View.VISIBLE);
+
                     expressionIsVisible = false;
 
-                    SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.shared_prefs), Context.MODE_PRIVATE);
-                    String ip = sharedPref.getString(getApplicationContext().getString(R.string.ip_address), "");
-
                     try {
-                        Bitmap myBitmap = QRCode.from(ip).bitmap();
+                        Bitmap myBitmap = QRCode.from("https://videortc.herokuapp.com/demo").bitmap();
                         qrCodeView.setImageBitmap(myBitmap);
                     }catch (Exception e){
                         e.printStackTrace();
@@ -199,12 +264,83 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                     break;
 
                 case 2:
+                    Log.i(TAG, "at position 2");
                     expressionView.setVisibility(View.INVISIBLE);
-                    keyboardView.setVisibility(View.VISIBLE);
+                    keyboardView.setVisibility(View.GONE);
                     qrCodeView.setVisibility(View.INVISIBLE);
+                    colorPickerContainer.setVisibility(View.VISIBLE);
+                    chatReceived.setVisibility(View.GONE);
                     expressionIsVisible = false;
-
                     break;
+
+
+            }
+        }
+    };
+
+
+    Thread temp = new Thread(){
+        @Override
+        public void run() {
+            int i=0;
+            while (true) {
+                if(command==1) {
+                    for (i = 0; i <= 40; i++) {
+                        if(command==1) {
+                            try {
+                                Log.i("change", "command 1 = " + i);
+                                drive(THREAD_GPIO_1, THREAD_GPIO_2, THREAD_PWM, THREAD_BOOL_1, THREAD_BOOL_2, i);
+                                drive(THREAD_GPIO_3, THREAD_GPIO_4, THREAD_PWM1, THREAD_BOOL_3, THREAD_BOOL_4, i);
+                                this.sleep(10);
+                            } catch (Exception e) {
+                                Log.i(TAG, e.getMessage());
+                            }
+                        }
+                        else{break;}
+                    }
+                    if(command==1)
+                        command = 4;
+                }
+                else if (command == 2)
+                {
+                    for ( ; i >=0; i--) {
+                        if(command==2) {
+                            try {
+                                Log.i("change", "command 2 = " + i);
+                                drive(THREAD_GPIO_1, THREAD_GPIO_2, THREAD_PWM, THREAD_BOOL_1, THREAD_BOOL_2, i);
+                                drive(THREAD_GPIO_3, THREAD_GPIO_4, THREAD_PWM1, THREAD_BOOL_3, THREAD_BOOL_4, i);
+                                this.sleep(10);
+                            } catch (Exception e) {
+                                Log.i(TAG, e.getMessage());
+                            }
+                        }
+                        else{break;}
+                    }
+                    if(command==2)
+                        command = 4;
+                }
+                else if (command == 0)
+                {
+                    try {
+                        drive(THREAD_GPIO_1, THREAD_GPIO_2, THREAD_PWM, THREAD_BOOL_1, THREAD_BOOL_2, 0);
+                        drive(THREAD_GPIO_3, THREAD_GPIO_4, THREAD_PWM1, THREAD_BOOL_3, THREAD_BOOL_4, 0);
+                        this.sleep(10);
+                    } catch (Exception e) {
+                        Log.i(TAG, e.getMessage());
+                    }
+
+                }
+                else if (command == 4)
+                {
+                    try {
+                        this.sleep(10);
+                    }
+                    catch(Exception e){
+                        Log.i(TAG,e.getMessage());
+                    }
+                }
+                /////////////////////////////////////////////////////////////////////////////////
+
             }
         }
     };
@@ -234,6 +370,14 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
         chatReceived = (TextView) findViewById(R.id.chat_text_view);
 
+        colorPickerView = (ColorPickerView) findViewById(R.id.color_picker_view);
+        colorPickerView.addOnColorChangedListener(colorChangedListener);
+        colorPickerView.addOnColorSelectedListener(colorSelectedListener);
+
+        colorPickerImage = (ImageView) findViewById(R.id.color_picker_image);
+        sendColor = (AppCompatButton) findViewById(R.id.color_send_btn);
+        sendColor.setOnClickListener(sendColorListener);
+
         b1.setOnClickListener(btnClickListener);
         b2.setOnClickListener(btnClickListener);
         b3.setOnClickListener(btnClickListener);
@@ -251,6 +395,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         qrCodeView = (ImageView) findViewById(R.id.qr_code_view);
         expressionView = (EmojiconTextView) findViewById(R.id.expression_view);
         keyboardView = (LinearLayout) findViewById(R.id.keyboard_view);
+        colorPickerContainer = (LinearLayout) findViewById(R.id.color_picker_container);
 
         multiStateToggleButton = (MultiStateToggleButton) this.findViewById(R.id.multi_stage_toggle);
         multiStateToggleButton.setOnValueChangedListener(valueChangedListener);
@@ -260,15 +405,14 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         String ip = sharedPref.getString(getApplicationContext().getString(R.string.ip_address), "");
         editText.setText(ip);
 
-        if (!ip.equalsIgnoreCase("")){
-            connectPaho();
-        }
+        connectPaho();
+//      connectPahoColor();
+        temp.start();
+
 
     }
 
     private void connectPaho(){
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.shared_prefs), Context.MODE_PRIVATE);
-        String ip = sharedPref.getString(getApplicationContext().getString(R.string.ip_address), "");
         broker = "tcp://m12.cloudmqtt.com:13768";
         Log.i(TAG, broker);
 
@@ -277,8 +421,8 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                         clientId);
 
         MqttConnectOptions options = new MqttConnectOptions();
-        options.setUserName("bdlwjtiv");
-        options.setPassword("LXdcdOEP_4CU".toCharArray());
+        options.setUserName("web-client");
+        options.setPassword("web-client".toCharArray());
 
         try {
             IMqttToken token = client.connect(options);
@@ -303,6 +447,64 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         } catch (MqttException e) {
             e.printStackTrace();
         }
+
+        //                     Attempt to access the UART device
+        try {
+            PeripheralManagerService manager = new PeripheralManagerService();
+            //uartDevice = manager.openUartDevice("UART0");
+            PWM_0 = manager.openPwm(PWM0);
+            PWM_1 = manager.openPwm(PWM1);
+            //List<String> portList = manager.getGpioList();
+            mGpio19 = manager.openGpio(BCM19);
+            mGpio23 = manager.openGpio(BCM23);
+            mGpio25 = manager.openGpio(BCM25);
+            mGpio26 = manager.openGpio(BCM26);
+
+        } catch (IOException e) {
+            Log.w(TAG, "Unable to access UART device", e);
+        }
+
+//        try {
+//            configureUartFrame(uartDevice);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+    }
+
+    private void connectPahoColor(){
+        String broker = "tcp://m21.cloudmqtt.com:12182";
+        Log.i(TAG, broker);
+
+        client2 =
+                new MqttAndroidClient(getApplicationContext(), broker,
+                        "omnia");
+
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setUserName("omnia");
+        options.setPassword("pixelate".toCharArray());
+
+        try {
+            IMqttToken token = client2.connect(options);
+            token.setActionCallback(new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    // We are connected
+                    Log.d(TAG, "onSuccess");
+
+                    Toast.makeText(getApplicationContext(), "Color MQTT Connection Successful", Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    // Something went wrong e.g. connection timeout or firewall problems
+                    Log.d(TAG, "onFailure");
+
+                    Toast.makeText(getApplicationContext(), "Color MQTT Connection Failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
     }
 
     private void publishMessage(String payload){
@@ -310,7 +512,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         try {
             encodedPayload = payload.getBytes("UTF-8");
             MqttMessage message = new MqttMessage(encodedPayload);
-            client.publish(topic_expression, message);
+            client2.publish(topic_color, message);
             Log.i(TAG, "Message published: " + message);
         } catch (UnsupportedEncodingException | MqttException e) {
             e.printStackTrace();
@@ -385,32 +587,167 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
     }
 
+    public void configureOutput(Gpio gpio,boolean temp) throws IOException {
+        // Initialize the pin as a high output
+        gpio.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH);
+        // Low voltage is considered active
+        gpio.setActiveType(Gpio.ACTIVE_LOW);
+        // Toggle the value to be LOW
+        gpio.setValue(temp);
+    }
+
+    public void initializePwm(Pwm pwm,int speed) throws IOException {
+        pwm.setPwmFrequencyHz(400);
+        pwm.setPwmDutyCycle(speed);
+        // Enable the PWM signal
+        pwm.setEnabled(true);
+    }
+
+    public void drive(Gpio gpio1,Gpio gpio2,Pwm gpio3,boolean logic_1,boolean logic_2,int speed) throws IOException
+    {
+        initializePwm(gpio3,speed);
+        configureOutput(gpio1,logic_1);
+        configureOutput(gpio2,logic_2);
+
+    }
+
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        Log.i(TAG, "Topic: " + topic + " | Message: " + message);
+        Log.i(TAG, "Topic: " + topic + " | Message: " + message.toString());
+
 
         switch (topic){
             case topic_control:
-                uartDevice.write(message.toString().getBytes(), message.toString().length());
-
+                //uartDevice.write(message.toString().getBytes(), message.toString().length());
                 switch (message.toString()){
                     case "forward_press*":
+//                        drive(mGpio19,mGpio26,PWM_1,true,false,75);
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = false;
+                        THREAD_BOOL_2 = true;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = false;
+                        THREAD_BOOL_4 = true;
+                        command = 1;
                         imageView.setImageResource(R.mipmap.ic_button_up);
                         break;
 
                     case "reverse_press*":
+//                        drive(mGpio19,mGpio26,PWM_1,false,false,0);
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = true;
+                        THREAD_BOOL_2 = false;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = true;
+                        THREAD_BOOL_4 = false;
+                        command = 1;
                         imageView.setImageResource(R.mipmap.ic_button_down);
                         break;
 
                     case "left_press*":
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = true;
+                        THREAD_BOOL_2 = false;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = false;
+                        THREAD_BOOL_4 = true;
+                        command = 1;
                         imageView.setImageResource(R.mipmap.ic_button_left);
                         break;
 
                     case "right_press*":
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = false;
+                        THREAD_BOOL_2 = true;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = true;
+                        THREAD_BOOL_4 = false;
+                        command = 1;
                         imageView.setImageResource(R.mipmap.ic_button_right);
                         break;
 
                     case "center_press*":
+                        imageView.setImageResource(R.mipmap.ic_button_center);
+                        break;
+
+                    case "forward_release*":
+//                        drive(mGpio19,mGpio26,PWM_1,false,false,0);
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = false;
+                        THREAD_BOOL_2 = true;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = false;
+                        THREAD_BOOL_4 = true;
+                        command = 2;
+                        imageView.setImageResource(R.mipmap.ic_button_up);
+                        break;
+
+                    case "reverse_release*":
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = true;
+                        THREAD_BOOL_2 = false;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = true;
+                        THREAD_BOOL_4 = false;
+                        command = 2;
+                        imageView.setImageResource(R.mipmap.ic_button_down);
+                        break;
+
+                    case "left_release*":
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = true;
+                        THREAD_BOOL_2 = false;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = false;
+                        THREAD_BOOL_4 = true;
+                        command = 2;
+                        imageView.setImageResource(R.mipmap.ic_button_left);
+                        break;
+
+                    case "right_release*":
+                        THREAD_GPIO_1 = mGpio19;
+                        THREAD_GPIO_2 = mGpio26;
+                        THREAD_PWM = PWM_1;
+                        THREAD_BOOL_1 = false;
+                        THREAD_BOOL_2 = true;
+                        THREAD_GPIO_3 = mGpio23;
+                        THREAD_GPIO_4 = mGpio25;
+                        THREAD_PWM1 = PWM_0;
+                        THREAD_BOOL_3 = true;
+                        THREAD_BOOL_4 = false;
+                        command = 2;
+                        imageView.setImageResource(R.mipmap.ic_button_right);
+                        break;
+
+                    case "center_release*":
                         imageView.setImageResource(R.mipmap.ic_button_center);
                         break;
 
@@ -423,7 +760,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                         break;
 
                     default:
-                        chatReceived.setText(message.getPayload().toString());
+//                        chatReceived.setText(message.toString());
                         break;
                 }
 
@@ -486,4 +823,31 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
         }
         return bitmap;
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if (mGpio19 != null) {
+            try {
+                mGpio19.close();
+                mGpio19 = null;
+            } catch (IOException e) {
+                Log.w(TAG, "Unable to close GPIO", e);
+            }
+    }
+    }
+
+    public boolean isInternetAvailable() {
+        try {
+            InetAddress ipAddr = InetAddress.getByName("google.com"); //You can replace it with your name
+            return !ipAddr.equals("");
+
+        } catch (Exception e) {
+            return false;
+        }
+
+    }
 }
+
+
