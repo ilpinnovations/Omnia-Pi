@@ -71,6 +71,10 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
     private Pwm PWM_0;
     private Pwm PWM_1;
 
+    private static boolean start=false;
+    private static boolean end=false;
+    public String var = "";
+
     private Gpio THREAD_GPIO_1;
     private Gpio THREAD_GPIO_2;
     private Pwm THREAD_PWM;
@@ -613,176 +617,230 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
 
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        Log.i(TAG, "Topic: " + topic + " | Message: " + message.toString());
+            ///////////////////////
 
-
-        switch (topic){
-            case topic_control:
-                //uartDevice.write(message.toString().getBytes(), message.toString().length());
-                switch (message.toString()){
-                    case "forward_press*":
-//                        drive(mGpio19,mGpio26,PWM_1,true,false,75);
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = false;
-                        THREAD_BOOL_2 = true;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = false;
-                        THREAD_BOOL_4 = true;
-                        command = 1;
-                        imageView.setImageResource(R.mipmap.ic_button_up);
-                        break;
-
-                    case "reverse_press*":
-//                        drive(mGpio19,mGpio26,PWM_1,false,false,0);
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = true;
-                        THREAD_BOOL_2 = false;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = true;
-                        THREAD_BOOL_4 = false;
-                        command = 1;
-                        imageView.setImageResource(R.mipmap.ic_button_down);
-                        break;
-
-                    case "left_press*":
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = true;
-                        THREAD_BOOL_2 = false;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = false;
-                        THREAD_BOOL_4 = true;
-                        command = 1;
-                        imageView.setImageResource(R.mipmap.ic_button_left);
-                        break;
-
-                    case "right_press*":
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = false;
-                        THREAD_BOOL_2 = true;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = true;
-                        THREAD_BOOL_4 = false;
-                        command = 1;
-                        imageView.setImageResource(R.mipmap.ic_button_right);
-                        break;
-
-                    case "center_press*":
-                        imageView.setImageResource(R.mipmap.ic_button_center);
-                        break;
-
-                    case "forward_release*":
-//                        drive(mGpio19,mGpio26,PWM_1,false,false,0);
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = false;
-                        THREAD_BOOL_2 = true;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = false;
-                        THREAD_BOOL_4 = true;
-                        command = 2;
-                        imageView.setImageResource(R.mipmap.ic_button_up);
-                        break;
-
-                    case "reverse_release*":
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = true;
-                        THREAD_BOOL_2 = false;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = true;
-                        THREAD_BOOL_4 = false;
-                        command = 2;
-                        imageView.setImageResource(R.mipmap.ic_button_down);
-                        break;
-
-                    case "left_release*":
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = true;
-                        THREAD_BOOL_2 = false;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = false;
-                        THREAD_BOOL_4 = true;
-                        command = 2;
-                        imageView.setImageResource(R.mipmap.ic_button_left);
-                        break;
-
-                    case "right_release*":
-                        THREAD_GPIO_1 = mGpio19;
-                        THREAD_GPIO_2 = mGpio26;
-                        THREAD_PWM = PWM_1;
-                        THREAD_BOOL_1 = false;
-                        THREAD_BOOL_2 = true;
-                        THREAD_GPIO_3 = mGpio23;
-                        THREAD_GPIO_4 = mGpio25;
-                        THREAD_PWM1 = PWM_0;
-                        THREAD_BOOL_3 = true;
-                        THREAD_BOOL_4 = false;
-                        command = 2;
-                        imageView.setImageResource(R.mipmap.ic_button_right);
-                        break;
-
-                    case "center_release*":
-                        imageView.setImageResource(R.mipmap.ic_button_center);
-                        break;
-
-                    case "6":
-                    case "7":
-                    case "8":
-                    case "9":
-                    case "0":
-                        imageView.setImageDrawable(null);
-                        break;
-
-                    default:
-//                        chatReceived.setText(message.toString());
-                        break;
-                }
-
-                break;
-
-            case topic_expression:
-                if (expressionIsVisible && !message.toString().equalsIgnoreCase("")){
-                    // expression view visible
-
-                    Log.i(TAG, "expression visible: " + String.valueOf(message.getPayload()));
-
-                    expressionView.setText(message.getPayload().toString());
-                }else {
-                    Log.i(TAG, "expression invisible");
-                    // expression not visible
-                }
-                break;
-
-            case topic_text:
-                chatReceived.setText(message.toString());
-                break;
+        if (message.toString().equalsIgnoreCase("start")) {
+            start = true;
+            end = false;
         }
+
+        if (start && !end){
+            Log.i("swap", "Topic: " + topic + " | Message: " + message.toString());
+            switch (topic){
+                case topic_control:
+                    //uartDevice.write(message.toString().getBytes(), message.toString().length());
+                    switch (message.toString()){
+                        case "U":
+                        case "forward_press*":
+                            var = "U";
+//                        drive(mGpio19,mGpio26,PWM_1,true,false,75);
+                            THREAD_GPIO_1 = mGpio19;
+                            THREAD_GPIO_2 = mGpio26;
+                            THREAD_PWM = PWM_1;
+                            THREAD_BOOL_1 = false;
+                            THREAD_BOOL_2 = true;
+                            THREAD_GPIO_3 = mGpio23;
+                            THREAD_GPIO_4 = mGpio25;
+                            THREAD_PWM1 = PWM_0;
+                            THREAD_BOOL_3 = false;
+                            THREAD_BOOL_4 = true;
+                            command = 1;
+                            imageView.setImageResource(R.mipmap.ic_button_up);
+                            break;
+
+                        case "UR2":
+                            var = "UR2";
+                            THREAD_GPIO_1 = mGpio19;
+                            THREAD_GPIO_2 = mGpio26;
+                            THREAD_PWM = PWM_1;
+                            THREAD_BOOL_1 = false;
+                            THREAD_BOOL_2 = true;
+                            THREAD_GPIO_3 = mGpio23;
+                            THREAD_GPIO_4 = mGpio25;
+                            THREAD_PWM1 = PWM_0;
+                            THREAD_BOOL_3 = false;
+                            THREAD_BOOL_4 = false;
+                            command = 1;
+                            imageView.setImageResource(R.mipmap.ic_button_right);
+                            break;
+
+
+                        case "D":
+                        case "reverse_press*":
+                            var = "D";
+//                        drive(mGpio19,mGpio26,PWM_1,false,false,0);
+                            THREAD_GPIO_1 = mGpio19;
+                            THREAD_GPIO_2 = mGpio26;
+                            THREAD_PWM = PWM_1;
+                            THREAD_BOOL_1 = true;
+                            THREAD_BOOL_2 = false;
+                            THREAD_GPIO_3 = mGpio23;
+                            THREAD_GPIO_4 = mGpio25;
+                            THREAD_PWM1 = PWM_0;
+                            THREAD_BOOL_3 = true;
+                            THREAD_BOOL_4 = false;
+                            command = 1;
+                            imageView.setImageResource(R.mipmap.ic_button_down);
+                            break;
+
+                        case "DL1":
+                        case "UL1":
+                        case "left_press*":
+                            var = "DL1";
+                            THREAD_GPIO_1 = mGpio19;
+                            THREAD_GPIO_2 = mGpio26;
+                            THREAD_PWM = PWM_1;
+                            THREAD_BOOL_1 = true;
+                            THREAD_BOOL_2 = false;
+                            THREAD_GPIO_3 = mGpio23;
+                            THREAD_GPIO_4 = mGpio25;
+                            THREAD_PWM1 = PWM_0;
+                            THREAD_BOOL_3 = false;
+                            THREAD_BOOL_4 = true;
+                            command = 1;
+                            imageView.setImageResource(R.mipmap.ic_button_left);
+                            break;
+
+                        case "DR1":
+                        case "UR1":
+                        case "right_press*":
+                            var = "DR1";
+                            THREAD_GPIO_1 = mGpio19;
+                            THREAD_GPIO_2 = mGpio26;
+                            THREAD_PWM = PWM_1;
+                            THREAD_BOOL_1 = false;
+                            THREAD_BOOL_2 = true;
+                            THREAD_GPIO_3 = mGpio23;
+                            THREAD_GPIO_4 = mGpio25;
+                            THREAD_PWM1 = PWM_0;
+                            THREAD_BOOL_3 = true;
+                            THREAD_BOOL_4 = false;
+                            command = 1;
+                            imageView.setImageResource(R.mipmap.ic_button_right);
+                            break;
+
+                        case "center_press*":
+                            imageView.setImageResource(R.mipmap.ic_button_center);
+                            break;
+
+                        default:
+//                        chatReceived.setText(message.toString());
+                            break;
+                    }
+
+                    break;
+
+                case topic_expression:
+                    if (expressionIsVisible && !message.toString().equalsIgnoreCase("")){
+                        // expression view visible
+
+                        Log.i(TAG, "expression visible: " + String.valueOf(message.getPayload()));
+
+                        expressionView.setText(message.getPayload().toString());
+                    }else {
+                        Log.i(TAG, "expression invisible");
+                        // expression not visible
+                    }
+                    break;
+
+                case topic_text:
+                    chatReceived.setText(message.toString());
+                    break;
+            }
+
+        }
+        if (message.toString().equalsIgnoreCase("end")) {
+            Log.i("swap",var + " this");
+            switch (var.toString())
+            {
+
+                case "U":
+//                        drive(mGpio19,mGpio26,PWM_1,false,false,0);
+                    THREAD_GPIO_1 = mGpio19;
+                    THREAD_GPIO_2 = mGpio26;
+                    THREAD_PWM = PWM_1;
+                    THREAD_BOOL_1 = false;
+                    THREAD_BOOL_2 = true;
+                    THREAD_GPIO_3 = mGpio23;
+                    THREAD_GPIO_4 = mGpio25;
+                    THREAD_PWM1 = PWM_0;
+                    THREAD_BOOL_3 = false;
+                    THREAD_BOOL_4 = true;
+                    command = 2;
+                    imageView.setImageResource(R.mipmap.ic_button_up);
+                    break;
+
+                case "D":
+                    THREAD_GPIO_1 = mGpio19;
+                    THREAD_GPIO_2 = mGpio26;
+                    THREAD_PWM = PWM_1;
+                    THREAD_BOOL_1 = true;
+                    THREAD_BOOL_2 = false;
+                    THREAD_GPIO_3 = mGpio23;
+                    THREAD_GPIO_4 = mGpio25;
+                    THREAD_PWM1 = PWM_0;
+                    THREAD_BOOL_3 = true;
+                    THREAD_BOOL_4 = false;
+                    command = 2;
+                    imageView.setImageResource(R.mipmap.ic_button_down);
+                    break;
+
+                case "DL1":
+                    THREAD_GPIO_1 = mGpio19;
+                    THREAD_GPIO_2 = mGpio26;
+                    THREAD_PWM = PWM_1;
+                    THREAD_BOOL_1 = true;
+                    THREAD_BOOL_2 = false;
+                    THREAD_GPIO_3 = mGpio23;
+                    THREAD_GPIO_4 = mGpio25;
+                    THREAD_PWM1 = PWM_0;
+                    THREAD_BOOL_3 = false;
+                    THREAD_BOOL_4 = true;
+                    command = 2;
+                    imageView.setImageResource(R.mipmap.ic_button_left);
+                    break;
+
+                case "DR1":
+                    THREAD_GPIO_1 = mGpio19;
+                    THREAD_GPIO_2 = mGpio26;
+                    THREAD_PWM = PWM_1;
+                    THREAD_BOOL_1 = false;
+                    THREAD_BOOL_2 = true;
+                    THREAD_GPIO_3 = mGpio23;
+                    THREAD_GPIO_4 = mGpio25;
+                    THREAD_PWM1 = PWM_0;
+                    THREAD_BOOL_3 = true;
+                    THREAD_BOOL_4 = false;
+                    command = 2;
+                    imageView.setImageResource(R.mipmap.ic_button_right);
+                    break;
+
+                case "UR2":
+                    var = "UR2";
+                    THREAD_GPIO_1 = mGpio19;
+                    THREAD_GPIO_2 = mGpio26;
+                    THREAD_PWM = PWM_1;
+                    THREAD_BOOL_1 = false;
+                    THREAD_BOOL_2 = true;
+                    THREAD_GPIO_3 = mGpio23;
+                    THREAD_GPIO_4 = mGpio25;
+                    THREAD_PWM1 = PWM_0;
+                    THREAD_BOOL_3 = false;
+                    THREAD_BOOL_4 = false;
+                    command = 2;
+                    imageView.setImageResource(R.mipmap.ic_button_right);
+                    break;
+
+                case "center_release*":
+                    imageView.setImageResource(R.mipmap.ic_button_center);
+                    break;
+                default:
+
+            }
+            end = true;
+            start = false;
+        }
+
     }
 
     @Override
