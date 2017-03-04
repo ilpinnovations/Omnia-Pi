@@ -289,7 +289,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
             int i=0;
             while (true) {
                 if(command==1) {
-                    for (i = 0; i <= 40; i++) {
+                    for (i = 0; i <= 60; i=i+2) {
                         if(command==1) {
                             try {
                                 Log.i("change", "command 1 = " + i);
@@ -307,7 +307,7 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                 }
                 else if (command == 2)
                 {
-                    for ( ; i >=0; i--) {
+                    for ( ; i >=0; i=i-2) {
                         if(command==2) {
                             try {
                                 Log.i("change", "command 2 = " + i);
@@ -648,23 +648,6 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                             imageView.setImageResource(R.mipmap.ic_button_up);
                             break;
 
-                        case "UR2":
-                            var = "UR2";
-                            THREAD_GPIO_1 = mGpio19;
-                            THREAD_GPIO_2 = mGpio26;
-                            THREAD_PWM = PWM_1;
-                            THREAD_BOOL_1 = false;
-                            THREAD_BOOL_2 = true;
-                            THREAD_GPIO_3 = mGpio23;
-                            THREAD_GPIO_4 = mGpio25;
-                            THREAD_PWM1 = PWM_0;
-                            THREAD_BOOL_3 = false;
-                            THREAD_BOOL_4 = false;
-                            command = 1;
-                            imageView.setImageResource(R.mipmap.ic_button_right);
-                            break;
-
-
                         case "D":
                         case "reverse_press*":
                             var = "D";
@@ -815,21 +798,6 @@ public class MainActivity extends AppCompatActivity implements MqttCallback {
                     imageView.setImageResource(R.mipmap.ic_button_right);
                     break;
 
-                case "UR2":
-                    var = "UR2";
-                    THREAD_GPIO_1 = mGpio19;
-                    THREAD_GPIO_2 = mGpio26;
-                    THREAD_PWM = PWM_1;
-                    THREAD_BOOL_1 = false;
-                    THREAD_BOOL_2 = true;
-                    THREAD_GPIO_3 = mGpio23;
-                    THREAD_GPIO_4 = mGpio25;
-                    THREAD_PWM1 = PWM_0;
-                    THREAD_BOOL_3 = false;
-                    THREAD_BOOL_4 = false;
-                    command = 2;
-                    imageView.setImageResource(R.mipmap.ic_button_right);
-                    break;
 
                 case "center_release*":
                     imageView.setImageResource(R.mipmap.ic_button_center);
